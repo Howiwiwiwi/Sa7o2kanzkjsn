@@ -465,7 +465,7 @@ def check_vefriy_code(email_address,token,code,family, username,password):
 
 @app.route('/')
 def hello():
-    return 'Hello, World!'
+    return render_template("index.html", state="Start Page",email="Null",username="Null",password="Null")
 
 @app.route('/go')
 def ok():
