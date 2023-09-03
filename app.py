@@ -1,20 +1,93 @@
 from flask import Flask
-import os, sys, time, re, datetime, random,requests
-import time,os,sys,random,hashlib
+import requests
+import struct, math
 from datetime import datetime
 app = Flask(__name__)
 
 xone = requests.Session()
-def log_id(username, password):
-        m = hashlib.md5()
-        m.update(username.encode() + password.encode())
+def md5(message):
+   
+    h0 = 0x67452301
+    h1 = 0xEFCDAB89
+    h2 = 0x98BADCFE
+    h3 = 0x10325476
 
-        seed = m.hexdigest()  
+  
+    original_length_bits = (8 * len(message)) & 0xffffffffffffffff
+    message += b'\x80'
+    while len(message) % 64 != 56:
+        message += b'\x00'
+
+    message += struct.pack('<Q', original_length_bits)
+
+    
+    for i in range(0, len(message), 64):
+        chunk = message[i:i+64]
+
+        
+        words = list(struct.unpack('<16I', chunk))
+
+        
+        a, b, c, d = h0, h1, h2, h3
+
+        
+        for j in range(64):
+            if j < 16:
+                f = (b & c) | ((~b) & d)
+                g = j
+            elif j < 32:
+                f = (d & b) | ((~d) & c)
+                g = (5*j + 1) % 16
+            elif j < 48:
+                f = b ^ c ^ d
+                g = (3*j + 5) % 16
+            else:
+                f = c ^ (b | (~d))
+                g = (7*j) % 16
+
+            temp = d
+            d = c
+            c = b
+            b = (b + left_rotate((a + f + words[g] + k(j)), r(j))) & 0xffffffff
+            a = temp
+
+        
+        h0 = (h0 + a) & 0xffffffff
+        h1 = (h1 + b) & 0xffffffff
+        h2 = (h2 + c) & 0xffffffff
+        h3 = (h3 + d) & 0xffffffff
+
+    
+    return '%08x%08x%08x%08x' % (h0, h1, h2, h3)
+
+
+def left_rotate(x, n):
+    return ((x << n) | (x >> (32 - n))) & 0xffffffff
+
+
+def k(i):
+    return int(4294967296 * abs(math.sin(i)))
+
+
+def r(i):
+    if i < 16:
+        return [7, 12, 17, 22][i % 4]
+    elif i < 32:
+        return [5, 9, 14, 20][i % 4]
+    elif i < 48:
+        return [4, 11, 16, 23][i % 4]
+    else:
+        return [6, 10, 15, 21][i % 4]
+
+
+def log_id(username, password):
+        m = md5(username.encode() + password.encode())
+
+        seed = m
         vs = "12345"
 
-        m = hashlib.md5()
-        m.update(seed.encode('utf-8') + vs.encode('utf-8'))
-        return 'android-' + m.hexdigest()[:16]
+        m = md5(seed.encode('utf-8') + vs.encode('utf-8'))
+        return 'android-' + m[:16]
     
 def genLoginHeaders(csrf, claim):
     headers = {
